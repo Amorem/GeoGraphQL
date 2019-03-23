@@ -6,7 +6,7 @@ import PinIcon from "./PinIcon";
 import Context from "../context";
 import Blog from "./Blog";
 import { PIN_ADDED_SUBSCRIPTION, PIN_UPDATED_SUBSCRIPTION, PIN_DELETED_SUBSCRIPTION } from "../graphql/subscriptions";
-
+import { unstable_useMediaQuery as useMediaQuery } from "@material-ui/core/useMediaQuery";
 import { Subscription } from "react-apollo";
 import { useClient } from "../client";
 import { GET_PINS_QUERY } from "../graphql/queries";
@@ -23,6 +23,7 @@ const INITIAL_VIEWPORT = {
 
 const Map = ({ classes }) => {
   const client = useClient();
+  const mobileSize = useMediaQuery('(max-width: 650px)')
   const { state, dispatch } = useContext(Context);
   useEffect(() => {
     getPins();
@@ -33,6 +34,11 @@ const Map = ({ classes }) => {
     getUserPosition();
   }, [])
   const [popup, setPopup] = useState(null);
+  // remove popup if pin itself is deleted by the author of the pin
+  useEffect(() => {
+    const pinExists = popup && state.pins.findIndex(pin => pin._id === popup._id) > -1
+    if (!pinExists) { setPopup(null) }
+  }, [state.pins.length])
 
   const getUserPosition = () => {
     if ("geolocation" in navigator) {
@@ -90,13 +96,14 @@ const Map = ({ classes }) => {
   }
 
   return (
-    <div className={classes.root}>
+    <div className={mobileSize ? classes.rootMobile : classes.root}>
       <ReactMapGL
         mapboxApiAccessToken="pk.eyJ1IjoiYW1vcmVtIiwiYSI6ImNqdGlsYmMwdTE1bWg0M3J1d2p6d2wwZXQifQ.foVLMEB9yAqXwufdLAm6IQ"
         width="100vw"
         height="calc(100vh - 64px)"
         mapStyle="mapbox://styles/mapbox/dark-v9"
         onClick={handleMapClick}
+        scrollZoom={!mobileSize}
         onViewportChange={newViewport => setViewport(newViewport)}
         {...viewport}
       >
